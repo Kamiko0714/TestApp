@@ -64,7 +64,7 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
                 error = "Password is required"
             }
             return false
-        } else if (value.length < 6) {
+        } else if (value.length < 8) {
             mBinding.password1.apply {
                 isErrorEnabled = true
                 error = "Password is need 6 characters long or more"
@@ -83,7 +83,7 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
                 error = "Confirm password is required"
             }
             return false
-        } else if (value.length < 6) {
+        } else if (value.length < 8) {
             mBinding.cPassword1.apply {
                 isErrorEnabled = true
                 error = "Confirm password is need 6 characters long or more"
