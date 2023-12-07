@@ -2,17 +2,25 @@ package com.example.testapp.view
 
 import android.content.res.ColorStateList
 import android.graphics.Color
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Patterns
 import android.view.KeyEvent
 import android.view.View
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
+import androidx.lifecycle.ViewModelProvider
 import com.example.testapp.R
+import com.example.testapp.data.RegistrationData
 import com.example.testapp.databinding.ActivityRegisterBinding
+import com.example.testapp.repository.AuthRepository
+import com.example.testapp.utils.APIservice
 
-class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeListener, View.OnKeyListener {
+class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeListener,
+    View.OnKeyListener {
 
     private lateinit var mBinding: ActivityRegisterBinding
+    private lateinit var mViewModel: RegisterActivityViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -22,6 +30,83 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
         mBinding.email2.onFocusChangeListener = this
         mBinding.password2.onFocusChangeListener = this
         mBinding.cPassword2.onFocusChangeListener = this
+        mViewModel = ViewModelProvider(
+            this,
+            RegisterActivityViewModelFactory(AuthRepository(APIservice.getService()), application)
+        )
+            .get(RegisterActivityViewModel::class.java)
+        setupObservers()
+    }
+
+    private fun setupObservers() {
+        mViewModel.getIsloading().observe(this) {
+            mBinding.progressBar.isVisible = it
+        }
+
+        mViewModel.getIsUniqu().observe(this){
+            if(validateEmail(shouldUpdateView = false)){
+                if(it){
+                    mBinding.email1.apply {
+                        if (isErrorEnabled) isErrorEnabled = false
+                        setStartIconDrawable(R.drawable.baseline_info_24)
+                        setStartIconTintList(ColorStateList.valueOf(Color.GREEN))
+                    }
+                }else{
+                    mBinding.email1.apply {
+                        if (startIconDrawable != null) startIconDrawable = null
+                        isErrorEnabled = true
+                        error = "Email is used"
+                    }
+                }
+            }
+            mBinding.email1.isErrorEnabled = false
+            return@observe
+        }
+
+        mViewModel.getErrorMessage().observe(this) {
+            val formErrorKeys = arrayOf("fullname", "email", "password")
+            val message = StringBuilder()
+            it.map { entry ->
+                if (formErrorKeys.contains(entry.key)) {
+                    when(entry.key) {
+                        "fullname" -> {
+                            mBinding.fullname1.apply {
+                                isErrorEnabled = true
+                                error = entry.value
+                            }
+                        }
+
+                        "email" -> {
+                            mBinding.email1.apply {
+                                isErrorEnabled = true
+                                error = entry.value
+                            }
+                        }
+
+                        "password" -> {
+                            mBinding.password1.apply {
+                                isErrorEnabled = true
+                                error = entry.value
+                            }
+                        }
+                    }
+                } else {
+                    message.append(entry.value).append("\n")
+                }
+                if (message.isNotEmpty()) {
+                    AlertDialog.Builder(this)
+                        .setIcon(R.drawable.baseline_check_circle_24)
+                        .setTitle("INFORMATION")
+                        .setMessage(message)
+                        .setPositiveButton("OK") { dialog, _ -> dialog!!.dismiss() }
+                        .show()
+                }
+            }
+        }
+
+        mViewModel.getUser().observe(this) {
+
+        }
     }
 
     private fun validateFullname(): Boolean {
@@ -37,7 +122,7 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
         return true
     }
 
-    private fun validateEmail(): Boolean {
+    private fun validateEmail(shouldUpdateView: Boolean = true): Boolean {
         val value = mBinding.email2.text.toString()
         if (value.isEmpty()) {
             mBinding.email1.apply {
@@ -48,9 +133,16 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
         } else if (!Patterns.EMAIL_ADDRESS.matcher(value).matches()) {
             mBinding.email1.apply {
                 isErrorEnabled = true
-                error = "Email is invalid"
+                error = "Invalid email address"
             }
             return false
+        }
+        if (shouldUpdateView) {
+            mBinding.email1.apply {
+                if (isErrorEnabled) isErrorEnabled = false
+                setStartIconDrawable(R.drawable.baseline_check_circle_24)
+                setStartIconTintList(ColorStateList.valueOf(Color.GREEN))
+            }
         }
         mBinding.email1.isErrorEnabled = false
         return true
@@ -100,7 +192,7 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
         if (password != confirmPassword) {
             mBinding.cPassword1.apply {
                 isErrorEnabled = true
-                error = "Confirm password doesn't match with password"
+                error= "Confirm password doesn't match with password"
             }
             return false
         }
@@ -112,44 +204,48 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
     }
 
     override fun onFocusChange(view: View?, hasFocus: Boolean) {
-        if(view != null){
-            when(view.id){
+        if (view != null) {
+            when (view.id) {
                 R.id.fullname2 -> {
-                    if(hasFocus){
-                        if(mBinding.fullname1.isErrorEnabled){
+                    if (hasFocus) {
+                        if (mBinding.fullname1.isErrorEnabled) {
                             mBinding.fullname1.isErrorEnabled = false
                         }
-                    }else{
+                    } else {
                         validateFullname()
                     }
                 }
+
                 R.id.email2 -> {
-                    if(hasFocus){
-                        if(mBinding.email1.isErrorEnabled){
+                    if (hasFocus) {
+                        if (mBinding.email1.isErrorEnabled) {
                             mBinding.email1.isErrorEnabled = false
                         }
-                    }else{
-                        validateEmail()
-                        //unik plz
+                    } else {
+                        if (validateEmail()) {
+                            mViewModel.validateRegistrion(RegistrationData(mBinding.email2.text!!.toString()))
+                        }
                     }
                 }
+
                 R.id.password2 -> {
-                    if(hasFocus){
-                        if(mBinding.password1.isErrorEnabled){
+                    if (hasFocus) {
+                        if (mBinding.password1.isErrorEnabled) {
                             mBinding.password1.isErrorEnabled = false
                         }
-                    }else{
+                    } else {
                         if (validatePassword() && mBinding.cPassword2.text!!.isNotEmpty() && validateConfirmPassword() && validatePasswordConfirmPassword()) {
                             mBinding.cPassword1.isErrorEnabled = false
                         }
                     }
                 }
+
                 R.id.cPassword2 -> {
-                    if(hasFocus){
-                        if(mBinding.cPassword1.isErrorEnabled){
+                    if (hasFocus) {
+                        if (mBinding.cPassword1.isErrorEnabled) {
                             mBinding.cPassword1.isErrorEnabled = false
                         }
-                    }else{
+                    } else {
                         validateConfirmPassword()
                         validatePasswordConfirmPassword()
                     }
