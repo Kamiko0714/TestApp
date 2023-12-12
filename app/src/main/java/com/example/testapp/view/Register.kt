@@ -15,7 +15,7 @@ import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import com.example.testapp.model.MainActivity
 import com.example.testapp.R
-import com.example.testapp.data.RegistrationData
+import com.example.testapp.data.RegisterRequestBody
 import com.example.testapp.data.ValidateEmail
 import com.example.testapp.databinding.ActivityRegisterBinding
 import com.example.testapp.repository.AuthRepository
@@ -50,11 +50,11 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
     }
 
     private fun setupObservers() {
-        mViewModel.getIsloading().observe(this) {
+        mViewModel.getIsLoading().observe(this) {
             mBinding.progressBar.isVisible = it
         }
 
-        mViewModel.getIsUniqu().observe(this){
+        mViewModel.getIsUnique().observe(this){
             if(validateEmail(shouldUpdateView = false)){
                 if(it){
                     mBinding.email1.apply {
@@ -237,7 +237,7 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
                         }
                     } else {
                         if (validateEmail()) {
-                            mViewModel.ValidateEmailAddress(ValidateEmail(mBinding.email2.text!!.toString()))
+                            mViewModel.validateEmailAddress(ValidateEmail(mBinding.email2.text!!.toString()))
                         }
                     }
                 }
@@ -296,7 +296,7 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
 
     private fun onSubmit(){
         if(validate()){
-            mViewModel.registerUser(RegistrationData(mBinding.fullname2.text!!.toString(), mBinding.email2.text!!.toString(), mBinding.password2.text!!.toString()))
+            mViewModel.registerUser(RegisterRequestBody(mBinding.fullname2.text!!.toString(), mBinding.email2.text!!.toString(), mBinding.password2.text!!.toString()))
         }
     }
 
