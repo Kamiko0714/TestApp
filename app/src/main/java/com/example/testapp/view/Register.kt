@@ -1,8 +1,11 @@
 package com.example.testapp.view
 
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Patterns
 import android.view.KeyEvent
 import android.view.View
@@ -10,14 +13,19 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
+import com.example.testapp.model.MainActivity
 import com.example.testapp.R
 import com.example.testapp.data.RegistrationData
+import com.example.testapp.data.ValidateEmail
 import com.example.testapp.databinding.ActivityRegisterBinding
 import com.example.testapp.repository.AuthRepository
 import com.example.testapp.utils.APIservice
+import com.example.testapp.utils.VibrateView
+import com.example.testapp.view_model.RegisterActivityViewModel
+import com.example.testapp.view_model.RegisterActivityViewModelFactory
 
 class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeListener,
-    View.OnKeyListener {
+    View.OnKeyListener, TextWatcher {
 
     private lateinit var mBinding: ActivityRegisterBinding
     private lateinit var mViewModel: RegisterActivityViewModel
@@ -29,7 +37,10 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
         mBinding.fullname2.onFocusChangeListener = this
         mBinding.email2.onFocusChangeListener = this
         mBinding.password2.onFocusChangeListener = this
+        mBinding.cPassword2.setOnKeyListener(this)
         mBinding.cPassword2.onFocusChangeListener = this
+        mBinding.cPassword2.addTextChangedListener(this)
+        mBinding.registerButton.setOnKeyListener(this)
         mViewModel = ViewModelProvider(
             this,
             RegisterActivityViewModelFactory(AuthRepository(APIservice.getService()), application)
@@ -105,102 +116,105 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
         }
 
         mViewModel.getUser().observe(this) {
-
+            if (it != null){
+                startActivity(Intent(this, MainActivity::class.java))
+            }
         }
     }
 
-    private fun validateFullname(): Boolean {
+    private fun validateFullname(shouldVibrateView: Boolean = true): Boolean {
+        var errorMessage: String? = null
         val value: String = mBinding.fullname2.text.toString()
         if (value.isEmpty()) {
             mBinding.fullname1.apply {
                 isErrorEnabled = true
                 error = "Full name is required"
             }
-            return false
         }
-        mBinding.fullname1.isErrorEnabled = false
-        return true
+        if (errorMessage != null) {
+            mBinding.fullname1.apply{
+                isErrorEnabled = true
+                error = errorMessage
+                if(shouldVibrateView) VibrateView.vibrate(this@Register, this)
+            }
+        }
+        return errorMessage == null
     }
 
-    private fun validateEmail(shouldUpdateView: Boolean = true): Boolean {
+    private fun validateEmail(shouldUpdateView: Boolean = true, shouldVibrateView: Boolean = true): Boolean {
+        var errorMessage: String? = null
         val value = mBinding.email2.text.toString()
-        if (value.isEmpty()) {
+        if (value.isEmpty()){
+            errorMessage = "Email is required"
+        } else if (!Patterns.EMAIL_ADDRESS.matcher(value).matches()){
+            errorMessage = "Email invalid"
+        }
+        if (errorMessage != null && shouldUpdateView){
             mBinding.email1.apply {
                 isErrorEnabled = true
-                error = "Email is required"
-            }
-            return false
-        } else if (!Patterns.EMAIL_ADDRESS.matcher(value).matches()) {
-            mBinding.email1.apply {
-                isErrorEnabled = true
-                error = "Invalid email address"
-            }
-            return false
-        }
-        if (shouldUpdateView) {
-            mBinding.email1.apply {
-                if (isErrorEnabled) isErrorEnabled = false
-                setStartIconDrawable(R.drawable.baseline_check_circle_24)
-                setStartIconTintList(ColorStateList.valueOf(Color.GREEN))
+                error = errorMessage
+                if(shouldVibrateView) VibrateView.vibrate(this@Register, this)
             }
         }
-        mBinding.email1.isErrorEnabled = false
-        return true
+        return errorMessage == null
     }
 
-    private fun validatePassword(): Boolean {
+    private fun validatePassword(shouldUpdateView: Boolean = true, shouldVibrateView: Boolean = true): Boolean {
+        var errorMessage: String? = null
         val value = mBinding.password2.text.toString()
         if (value.isEmpty()) {
-            mBinding.password1.apply {
-                isErrorEnabled = true
-                error = "Password is required"
-            }
-            return false
+            errorMessage = "Password required"
         } else if (value.length < 8) {
+            errorMessage = "Passwrod must be 8 character long"
+        }
+        if (errorMessage != null && shouldUpdateView) {
             mBinding.password1.apply {
                 isErrorEnabled = true
-                error = "Password is need 6 characters long or more"
+                error = errorMessage
+                if(shouldVibrateView) VibrateView.vibrate(this@Register, this)
             }
-            return false
         }
-        mBinding.password1.isErrorEnabled = false
-        return true
+        return errorMessage == null
     }
 
-    private fun validateConfirmPassword(): Boolean {
+    private fun validateConfirmPassword(shouldUpdateView: Boolean = true, shouldVibrateView: Boolean = true): Boolean {
+        var errorMessage: String? = null
         val value = mBinding.cPassword2.text.toString()
         if (value.isEmpty()) {
-            mBinding.cPassword1.apply {
-                isErrorEnabled = true
-                error = "Confirm password is required"
-            }
-            return false
+            errorMessage = "Password required"
         } else if (value.length < 8) {
+            errorMessage = "Passwrod must be 8 character long"
+        }
+        if (errorMessage != null && shouldUpdateView) {
             mBinding.cPassword1.apply {
                 isErrorEnabled = true
-                error = "Confirm password is need 6 characters long or more"
+                error = errorMessage
+                if(shouldVibrateView) VibrateView.vibrate(this@Register, this)
             }
-            return false
         }
-        mBinding.cPassword1.isErrorEnabled = false
-        return true
+        return errorMessage == null
     }
 
-    private fun validatePasswordConfirmPassword(): Boolean {
+    private fun validatePasswordConfirmPassword(shouldUpdateView: Boolean = true, shouldVibrateView: Boolean = true): Boolean {
+        var errorMessage: String? = null
         val password = mBinding.password2.text.toString()
         val confirmPassword = mBinding.cPassword2.text.toString()
         if (password != confirmPassword) {
+            errorMessage = "Confirm password doesn't match with password"
+        }
+        if (errorMessage != null && shouldUpdateView) {
             mBinding.cPassword1.apply {
                 isErrorEnabled = true
-                error= "Confirm password doesn't match with password"
+                error = errorMessage
+                if(shouldVibrateView) VibrateView.vibrate(this@Register, this)
             }
-            return false
         }
-        mBinding.cPassword1.isErrorEnabled = false
-        return true
+        return errorMessage == null
     }
 
     override fun onClick(view: View?) {
+        if (view != null && view.id == R.id.registerButton)
+            onSubmit()
     }
 
     override fun onFocusChange(view: View?, hasFocus: Boolean) {
@@ -223,7 +237,7 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
                         }
                     } else {
                         if (validateEmail()) {
-                            mViewModel.validateRegistrion(RegistrationData(mBinding.email2.text!!.toString()))
+                            mViewModel.ValidateEmailAddress(ValidateEmail(mBinding.email2.text!!.toString()))
                         }
                     }
                 }
@@ -254,7 +268,49 @@ class Register : AppCompatActivity(), View.OnClickListener, View.OnFocusChangeLi
         }
     }
 
-    override fun onKey(v: View?, keyCode: Int, event: KeyEvent?): Boolean {
+    override fun onKey(view: View?, keyCode: Int, keyEvent: KeyEvent?): Boolean {
+        if(KeyEvent.KEYCODE_ENTER == keyCode && keyEvent!!.action == KeyEvent.ACTION_UP){
+            onSubmit()
+        }
+
         return false
+    }
+
+    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+        if(validatePassword(shouldUpdateView = false) && validateConfirmPassword(shouldUpdateView = false)
+            && validatePasswordConfirmPassword(shouldUpdateView = false)){
+            mBinding.cPassword1.apply {
+                if (isErrorEnabled) isErrorEnabled = false
+                setStartIconDrawable(R.drawable.baseline_check_circle_24)
+                setStartIconTintList(ColorStateList.valueOf(Color.GREEN))
+            }
+        }else{
+            if (mBinding.cPassword1.startIconDrawable != null)
+                mBinding.cPassword1.startIconDrawable = null
+        }
+    }
+
+    override fun afterTextChanged(s: Editable?) {}
+
+    private fun onSubmit(){
+        if(validate()){
+            mViewModel.registerUser(RegistrationData(mBinding.fullname2.text!!.toString(), mBinding.email2.text!!.toString(), mBinding.password2.text!!.toString()))
+        }
+    }
+
+    private fun validate(): Boolean {
+        var isValid = true
+
+        if(!validateFullname(shouldVibrateView = false)) isValid = false
+        if(!validateEmail(shouldVibrateView = false)) isValid = false
+        if(!validatePassword(shouldVibrateView = false)) isValid = false
+        if(!validateConfirmPassword(shouldVibrateView = false)) isValid = false
+        if(isValid && !validatePasswordConfirmPassword(shouldVibrateView = false)) isValid = false
+
+        if (!isValid) VibrateView.vibrate(this, mBinding.cardview)
+
+        return isValid
     }
 }
